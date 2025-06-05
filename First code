@@ -1,0 +1,96 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+from sklearn.metrics import mean_squared_error
+
+# Load your dataset
+data = pd.read_csv('carbon_emissions.csv')  # Assume columns: ['Year', 'CO2_Emissions']
+
+# Only take the emissions for LSTM
+emissions = data['CO2_Emissions'].values.reshape(-1, 1)
+
+# Normalize the data
+scaler = MinMaxScaler(feature_range=(0, 1))
+emissions_scaled = scaler.fit_transform(emissions)
+
+# Create sequences for LSTM
+# For example, predict next value using previous 5 years
+def create_sequences(data, time_step=5):
+    X, y = [], []
+    for i in range(len(data) - time_step):
+        X.append(data[i:i+time_step])
+        y.append(data[i + time_step])
+    return np.array(X), np.array(y)
+
+X, y = create_sequences(emissions_scaled, 5)
+
+# Split into training and testing datasets
+train_size = int(len(X) * 0.8)
+X_train, X_test = X[:train_size], X[train_size:]
+y_train, y_test = y[:train_size], y[train_size:]
+
+# Build the LSTM model
+model = Sequential()
+model.add(LSTM(50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
+model.add(LSTM(50, return_sequences=False))
+model.add(Dense(1))
+
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+# Train the model
+history = model.fit(X_train, y_train, epochs=100, batch_size=1, verbose=2, validation_data=(X_test, y_test))
+
+# Predictions
+train_predict = model.predict(X_train)
+test_predict = model.predict(X_test)
+
+# Inverse transform to get actual values
+train_predict = scaler.inverse_transform(train_predict)
+y_train_actual = scaler.inverse_transform(y_train)
+test_predict = scaler.inverse_transform(test_predict)
+y_test_actual = scaler.inverse_transform(y_test)
+
+# Plotting
+plt.figure(figsize=(10,6))
+plt.plot(data['Year'][5:5+len(train_predict)], y_train_actual, label='Train Actual')
+plt.plot(data['Year'][5:5+len(train_predict)], train_predict, label='Train Predicted')
+plt.plot(data['Year'][5+len(train_predict):5+len(train_predict)+len(test_predict)], y_test_actual, label='Test Actual')
+plt.plot(data['Year'][5+len(train_predict):5+len(train_predict)+len(test_predict)], test_predict, label='Test Predicted')
+plt.xlabel('Year')
+plt.ylabel('CO2 Emissions')
+plt.title('Carbon Emissions Forecasting using LSTM')
+plt.legend()
+plt.show()
+
+# Evaluate
+train_rmse = np.sqrt(mean_squared_error(y_train_actual, train_predict))
+test_rmse = np.sqrt(mean_squared_error(y_test_actual, test_predict))
+
+print(f'Train RMSE: {train_rmse}')
+print(f'Test RMSE: {test_rmse}')
+
+# Forecast future
+last_sequence = emissions_scaled[-5:]
+future_predictions = []
+n_future = 10  # Predict next 10 years
+
+for _ in range(n_future):
+    next_pred = model.predict(last_sequence.reshape(1, 5, 1))
+    future_predictions.append(next_pred[0,0])
+    last_sequence = np.append(last_sequence[1:], next_pred, axis=0)
+
+future_predictions = scaler.inverse_transform(np.array(future_predictions).reshape(-1, 1))
+future_years = np.arange(data['Year'].iloc[-1] + 1, data['Year'].iloc[-1] + 1 + n_future)
+
+# Plot future forecasts
+plt.figure(figsize=(10,6))
+plt.plot(data['Year'], emissions, label='Historical')
+plt.plot(future_years, future_predictions, label='Forecast', linestyle='--')
+plt.xlabel('Year')
+plt.ylabel('CO2 Emissions')
+plt.title('Future CO2 Emissions Forecast')
+plt.legend()
+plt.show()
