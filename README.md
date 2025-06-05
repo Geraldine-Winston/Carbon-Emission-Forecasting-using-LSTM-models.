@@ -1,6 +1,6 @@
 # Carbon Emission Forecasting using LSTM
 
-This repository contains a project that uses LSTM (Long Short-Term Memory) neural networks to forecast carbon emissions based on historical data.
+This repository presents a comprehensive approach to forecasting carbon emissions using advanced LSTM (Long Short-Term Memory) neural networks. As climate change and environmental sustainability become increasingly critical, accurate forecasting of carbon emissions is essential for policymakers, researchers, and industries aiming to mitigate environmental impacts. This project harnesses deep learning techniques to analyze historical carbon emission trends and predict future values with high accuracy. By leveraging sequential data modeling capabilities of LSTMs, the project offers valuable insights for strategic environmental planning and decision-making.
 
 ## Project Structure
 
@@ -69,3 +69,4 @@ python carbon_emission_forecasting_lstm.py
 ## Author
 
 Ayebawanaemi Geraldine Winston
+
